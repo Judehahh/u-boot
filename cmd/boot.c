@@ -10,6 +10,7 @@
 #include <common.h>
 #include <command.h>
 #include <net.h>
+#include <asm/io.h>
 
 #ifdef CONFIG_CMD_GO
 
@@ -54,6 +55,32 @@ U_BOOT_CMD(
 );
 
 #endif
+
+static int boot_small(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	ulong	addr;
+
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+	addr = hextoul(argv[1], NULL);
+
+	printf("## Booting small core at 0x%08lX ...\n", addr);
+
+	writel(addr, (void*)0x91102100ULL); //cpu0_hart_rstvec 设置小核的解复位向量，复位后程序执行位置
+
+	writel(0x10001000, (void*)0x91101004ULL); //清 done bit
+	writel(0x10001, (void*)0x91101004ULL); //设置 reset bit
+	writel(0x10000, (void *)0x91101004ULL); //清 reset bit
+	return 0;
+}
+
+U_BOOT_CMD(
+	bootsmall, CONFIG_SYS_MAXARGS, 1, boot_small,
+	"start application from small core at address 'addr'",
+	"addr [arg ...]\n    - start application from small core at address 'addr'\n"
+	"      passing 'arg' as arguments"
+);
 
 U_BOOT_CMD(
 	reset, 2, 0,	do_reset,
